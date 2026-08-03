@@ -1,0 +1,8 @@
+Prestige system: Add a class upgrade mechanic (e.g., Sage → Archmage) that unlocks
+after reaching level 3.
+
+Base (stats)	→ Promotion	Ability upgrade	Stat buff (FP/Pwr/WR)	Result
+Sage 120/18/18	Archmage	keeps +50% score	+30 / +6 / +6	150/24/24
+Hexblade 100/24/14	Warlock	scroll magnitude ×2 → ×3	+20 / +10 / +4	120/34/18
+Warden 150/16/22	Bastion	damage taken −1 → −2	+40 / +4 / +8	190/20/30
+Voidwalker 110/22/12	Voidlord	negative-scroll flip 50% → 100%	+20 / +10 / +4	130/32/16

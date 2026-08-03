@@ -1,0 +1,11 @@
+# Build artifacts
+/build/
+
+# Compiled objects / binaries
+*.o
+*.a
+*.exe
+
+# Editor / OS cruft
+*.swp
+.DS_Store

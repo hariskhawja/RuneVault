@@ -1,0 +1,434 @@
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 1 
+ 
+UNIVERSITY OF WATERLOO 
+CS247 – Software Engineering Principles 
+Project Specification 
+RuneVault 
+The Arcanist's Descent 
+ 
+Instructor: Victoria Sakhnini 
+Course: CS247 – Software Engineering Principles 
+ 
+Important:  DO NOT SUBMIT WITHOUT COMPILING AND TESTING FIRST. If your final 
+submission does not compile or otherwise does not run, you will have nothing to show during 
+your demo. Resist the temptation to make last-minute changes; they are almost certainly not 
+worth the risk. 
+ 
+Above all, MAKE SURE YOUR SUBMITTED PROGRAM RUNS. Markers do not have time to 
+read source code and award partial marks for non-working programs. Even a partially working 
+program that runs is far better than one that does not. 
+ 
+The Game of RuneVault 
+ 
+In this project, you will implement RuneVault (RV), a single-player dungeon-crawler in the 
+tradition of classic rogue-like games. You play as an Arcanist, a scholar of forbidden magic who 
+has descended into the Cursed Vault beneath the Academy, seeking the five Shards of the 
+Shattered Seal. Each Shard is locked on a different vault level and guarded by increasingly 
+powerful Spectral Wardens. 
+A game of RuneVault consists of a board 79 columns wide and 30 rows tall (5 rows are 
+reserved for displaying status information). The Arcanist moves through five vault levels, 
+dispelling wards, collecting rune fragments, and defeating spectral enemies until claiming the 
+Shard on level 5 or being overwhelmed by the Vault's defences. RuneVault redraws the entire 
+board after every command rather than updating in real time. 
+ 
+Some Definitions 
+• Arcanist (AC):  The player character, controlled by the player. Always shown as @ on 
+the board. 
+• Spectre:  A non-playable enemy character inhabiting the vault. All Spectres are hostile 
+unless noted otherwise. 
+• Rune Fragment (RF):  The primary currency of RuneVault. Collected by walking over it 
+or defeating certain enemies. 
+• Ward:  A magical lock on the descent to the next level. Only lifted when the Arcanist 
+carries the Cipher Gem for that level. 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 2 
+ 
+• Vault Level:  A predefined configuration of 5 chambers connected by arcane corridors. 
+The configuration is the same on every level. 
+• Focus Points (FP):  The representation of the Arcanist's magical reserves, equivalent to 
+HP. When FP reaches 0, the run ends. 
+• Power (Pwr):  The representation of a character's offensive strength. 
+• Ward Rating (WR):  The representation of a character's magical resistance, equivalent 
+to Def. 
+• Cell:  Either a vault wall, floor tile, archway, or corridor segment. 
+• Spawned:  An enemy, fragment, or scroll has been placed on the board at the start of 
+the level. 
+• 1 Block Radius:  The 8 cells immediately adjacent to a character or item. 
+• Shard: A Shard of the Shattered Seal, represented in play as a Shard Coffer (see Rune 
+Fragments). Exactly one Shard is placed on every vault level, guarded by a Vault 
+Anchor. 
+ 
+System Components 
+ 
+ 
+Arcanist Classes 
+By default, the Arcanist plays as a Sage (120 FP, 18 Pwr, 18 WR). At the start of each game, 
+the player selects one of the four classes below. The Arcanist is always shown as @ on the 
+board. 
+ 
+Class FP Pwr WR Class Ability 
+Sage (s) 120 18 18 Rune Fragments collected are worth +50% at end-
+game scoring 
+Hexblade (h) 100 24 14 All scrolls produce double their normal effect 
+(positive and negative) 
+Warden (w) 150 16 22 Damage taken from Spectres is reduced by 1 
+(minimum 1) 
+Voidwalker (v) 110 22 12 Negative scrolls have a chance (50%) to produce 
+their positive counterpart instead 
+ 
+Design Question 1: 
+How could you design your system so that each Arcanist class can be easily generated, and its class 
+ability cleanly applied without scattering conditionals throughout the codebase? How difficult does 
+such a design make it to add a fifth class later? 
+ 
+ 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 3 
+Spectres 
+Spectres are the Arcanist's adversaries inside the vault. Unless noted otherwise, Spectres move 
+one square randomly within the chamber in which they were spawned. The exception is Vault 
+Anchors, who are stationary and always guard a Shard Coffer. 
+ 
+ 
+Specter Symbol FP Pwr WR Special 
+Wraith W 60 20 10 — 
+Banshee B 40 30 5 — 
+Revenant R 100 18 20 — 
+Shade S 50 8 8 — 
+Lich L 30 40 5 Becomes permanently hostile to all future 
+Arcanists if attacked 
+Vault Anchor A 120 22 18 Always guards a Shard Coffer; stationary 
+Specter Lord X 80 28 15 — 
+ 
+ 
+Lich:  A Lich can be attacked and defeated by the Arcanist. Attacking or slaying a Lich causes 
+every Lich on subsequent levels to become hostile, attacking the Arcanist if it passes within a 
+one-block radius. 
+Vault Anchors:  A Vault Anchor always spawns within a one-block radius of its Shard Coffer. 
+Whenever a Shard Coffer is placed on a level, a Vault Anchor is also placed to guard it. The 
+Vault Anchor is only hostile when the Arcanist is adjacent to the Shard Coffer. 
+Spectre drops:  Upon defeat, any Spectre that is not a Vault Anchor or Lich drops 1 Rune 
+Fragment, immediately added to the Arcanist's total. 
+Spectre movement: Spectres (except Vault Anchors) move randomly one floor tile at a time, 
+provided the tile is unoccupied. A Spectre can never leave the chamber in which it was 
+spawned. Spectres are moved row by row, left to right. Any particular Spectre is moved at most 
+once per Arcanist action. 
+Spectre attacks:  If the Arcanist is within a 1-block radius of a hostile Spectre, that 
+Spectre attacks instead of moving. There is a 50% chance the attack misses. 
+ 
+Design Question 2: 
+How does your system handle generating the different Spectre types? Is the approach different from 
+how you generate the Arcanist class? Why or why not? 
+ 
+Design Question 3: 
+How could you implement special abilities for Spectres, for example, Focus Point drain for Wraiths, 
+temporary Warding reduction for Banshees, or rune-fragment theft for Shades? What design pattern 
+best models abilities that modify combat outcomes without permanently altering the character objects 
+involved? 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 4 
+Items 
+ 
+ 
+Arcane Scrolls 
+Scrolls are the consumable items of RuneVault. All scrolls are shown as ? on the board. The 
+Arcanist cannot carry scrolls; a scroll can only be used when the Arcanist is within a 1-block 
+radius of it. The effect of a scroll is not known until it is first used in a session. After first use, that 
+scroll's type is remembered for the remainder of the run; other scroll instances remain unknown. 
+ 
+Type Abbrev. Effect Duration 
+Attune Focus AF Restore up to 10 FP (cannot exceed class 
+maximum) 
+Permanent 
+Surge Power SP Increase Pwr by 5 Current level only 
+Fortify Ward FW Increase WR by 5 Current level only 
+Drain Focus DF Lose up to 10 FP (cannot fall below 0) Permanent 
+Sap Power SaP Decrease Pwr by 5 (cannot fall below 0) Current level only 
+Erode Ward EW Decrease WR by 5 (cannot fall below 0) Current level only 
+ 
+Design Question 4: 
+What design pattern could you use to model the temporary effects of Surge Power, Fortify Ward, Sap 
+Power, and Erode Ward, so that you do not need to explicitly track which scrolls the Arcanist has 
+used on a given level? Consider how level transitions should trigger the reversal of these effects.  
+ 
+Rune Fragments 
+Rune Fragments are the scoring currency of RuneVault, shown as * on the board. They come in 
+several grades: 
+ 
+Fragment Type Value Notes 
+Common shard 1 Standard drop 
+Resonant shard 2 Standard drop 
+Lich cache 4 Dropped on the defeat of a Lich 
+Shard Coffer 6 Guarded by a Vault Anchor; can only be collected after 
+the Anchor is defeated 
+ 
+ 
+ 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 5 
+Major Items 
+Two unique items appear across the run, one recurring and one unique. 
+ 
+The Cipher Gem (C):  Appears once per level. At the start of each level, one Spectre is chosen 
+uniformly at random to carry the Cipher Gem, excluding Vault Anchors. When that Spectre is 
+defeated, the Gem drops on its tile and is picked up by walking over it. Picking up the Cipher 
+Gem lifts the Ward on the descent to the next level and reveals the stairway (shown as \) on the 
+display. 
+ 
+The Aegis Cloak (G):  Appears only once per run, on a randomly selected level (2–4). It follows 
+the same placement rules as a Shard Coffer, always guarded by a Vault Anchor and 
+inaccessible until that Anchor is defeated. While the Arcanist carries the Aegis Cloak, all 
+damage taken is halved (rounded up). 
+ 
+Design Question 5: 
+How could you design item generation so that Rune Fragments, Scrolls, and Major Items reuse as 
+much code as possible? How would you structure your hierarchy to avoid duplicating the 'guarded 
+placement' logic shared by the Shard Coffer and the Aegis Cloak? 
+ 
+Vault Levels 
+ 
+Each vault level consists of 5 chambers connected in the same fixed configuration (see Figure 
+1). All five levels share this layout. The chambers are connected as follows: chamber 1 
+connects to chambers 2 and 3; chamber 2 connects to chamber 4; chamber 3 connects to 
+chamber 4; and chamber 4 connects to chamber 5. Every chamber is therefore reachable from 
+every other chamber. A corridor always meets a chamber at an archway (+).The Ward on the 
+descent is lifted only when the Arcanist carries the Cipher Gem for that level. 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 6 
+ 
+ 
+ 
+ 
+
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 7 
+Spawning Rules 
+Arcanist:  Spawns randomly on a floor tile in any chamber. The Arcanist must not spawn in the 
+same chamber as the descent point (stairway). Chamber selection and tile selection within the 
+chamber are uniformly random. 
+Descent (stairway):  Shown only after the Arcanist picks up the Cipher Gem. Without the Gem, 
+the stairway tile looks like a regular floor tile, but walking over it has no effect until the Ward is 
+lifted. 
+Scrolls:  10 scrolls spawned per level, each of the 6 types with equal probability (1/6). Any 
+chamber has an equal probability of hosting a scroll; any floor tile within the selected chamber is 
+equally likely. 
+Rune Fragments:  Exactly one Shard Coffer (the level's Shard) is spawned per level, guarded 
+by a Vault Anchor. The remaining 9 Rune Fragment piles are common shards (probability 5/7) 
+or resonant shards (probability 2/7). Chambers and floor tiles within chambers are equally likely. 
+Spectre Spawn Distribution: 
+20 Spectres spawned per level. Every chamber is equally likely to spawn any particular Spectre. 
+Spawn probabilities (excluding Vault Anchors): 
+ 
+ 
+Specter Probability 
+Wraith 2/9 
+Banshee 3/18 
+Shade 5/18 
+Revenant 1/9 
+Specter Lord 1/9 
+Lich 1/9 
+ 
+ 
+Generation order:  Arcanist location, stairway location, scrolls, rune fragments, spectres. This 
+ordering allows for consistent evaluation of random generation. 
+Multiple objects cannot occupy the same cell. No two objects may ever share a space, except 
+rune fragments, which are collected when the Arcanist walks over them. Spectres and items 
+may only spawn on floor tiles, never in archways, corridors, or on the stairway. 
+ 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 8 
+Combat 
+ 
+All Spectres except Liches and Vault Anchors are hostile by default. If the Arcanist enters within 
+a 1-block radius of a hostile Spectre, the Spectre attacks instead of moving. Vault Anchors are 
+only hostile when the Arcanist is adjacent to their Shard Coffer. Spectres never pursue the 
+Arcanist. 
+ 
+Initiative:  The Arcanist always has initiative and attacks first. 
+Spectre attacks:  Auto-attack when the Arcanist is within a 1 block radius. There is a 50% 
+chance the attack misses. 
+Arcanist attacks:  The Arcanist may attack any Spectre within a 1-block radius. The Arcanist 
+never misses. 
+ 
+Damage Formula 
+ 
+Damage(Defender) = ceiling( (100 / (100 + WR(Defender))) × Pwr(Attacker) ) 
+ 
+where Attacker is the attacking character, and Defender is the character being attacked. 
+ 
+If a Spectre's attack hits, the Arcanist's FP is reduced by Damage(AC) as calculated above 
+(halved if the Aegis Cloak is carried). 
+ 
+ 
+Aegis Cloak effect:  If the Arcanist carries the Aegis Cloak, the damage they take is halved 
+(rounded up): 
+ 
+Damage(AC) = ceiling( Damage(Defender) / 2 ) 
+ 
+If both the Warden's −1 reduction and the Aegis Cloak apply, resolve them in this order: subtract 
+the Warden's 1, halve the result rounding up, then apply the minimum of 1. 
+Damage(AC) = max(1, ceiling((Damage − 1) / 2)) 
+Example: base damage 4 → max(1, ceiling(3 / 2)) = 2. 
+ 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 9 
+Display 
+ 
+The board redraws completely after every command. The bottom 5 rows display status 
+information. The Arcanist can see all chambers simultaneously. 
+ 
+Symbol Meaning 
+@ Arcanist (player character) 
+|, - Vault walls 
++ Archway (doorway) 
+# Corridor 
+. Floor tile (walkable) 
+\ Descent to next level (only visible after picking up the Cipher Gem) 
+S Arcane Scroll (type unknown until used) 
+* Rune Fragment (all types) 
+? Cipher Gem (drops when its carrier is defeated) 
+G Aegis Cloak 
+W Wraith 
+B Banshee 
+R Revenant 
+S Shade 
+L Lich 
+A Vault Anchor 
+X Specter Lord 
+ 
+Recommendation:  Use ANSI colour output codes to make the Arcanist and descent point stand out. 
+Use different colours for Spectres, Rune Fragments, and Scrolls to improve readability. 
+ 
+ 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 10 
+Command Interpreter 
+ 
+Initially, the game will prompt the player to select an Arcanist class or quit. Play then continues 
+until the Arcanist reaches the end of level 5, their FP reaches 0, the player restarts, or the player 
+quits. If the run ends, the player is offered the option to play again. 
+ 
+The following commands are supported: 
+• no, so, ea, we, ne, nw, se, sw , Moves the Arcanist one cell in the specified cardinal or 
+diagonal direction. 
+• u direction, Uses the scroll in the specified direction (e.g., u no, u ea). The scroll must 
+be within a 1-block radius. 
+• a direction: Attacks the Spectre in the specified direction. The Spectre must be 
+immediately adjacent. If there is no Spectre adjacent in the specified direction, the attack 
+command has no effect, and the turn is not consumed 
+• s, h, w, v , Selects the Arcanist's class at game start (Sage, Hexblade, Warden, 
+Voidwalker). 
+• r , Restarts the run. All stats, scrolls, and rune fragments are reset. A new class must be 
+selected. 
+• q , Quits the game. 
+The board redraws after every command. 
+ 
+Ending the Run and Scoring 
+ 
+A run ends in one of the following ways: 
+• The Arcanist reaches and descends the stairway on level 5 (win). 
+• The Arcanist's FP reaches 0 (loss). 
+• The player restarts the run. 
+ 
+A score is generated only on a win. The score equals the total Rune Fragments collected, 
+except that Sages receive a 50% bonus to their final score. 
+ 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 11 
+Command-Line Options 
+ 
+Your program should support the following optional command-line argument: 
+• Level layout file: A single optional argument specifying a file that defines the layout of all 
+five levels. The file provides the exact level layout as presented to the player (minus the 
+5 status rows at the bottom). Scrolls and rune fragments are represented by numbers in 
+the file, which are converted to the appropriate characters on display. 
+ 
+ 
+Number Item 
+0 AF (Attune Focus scroll) 
+1 SP (Surge Power scroll) 
+2 FW (Fortify Ward scroll) 
+3 DF (Drain Focus scroll) 
+4 SaP (Sap Power scroll) 
+5 EW (Erode Ward scroll) 
+6 Common shard 
+7 Resonant shard 
+8 Lich cache 
+9 Shard Coffer 
+ 
+Optional:  You may support a second optional argument specifying a seed for the random 
+number generator, enabling reproducible runs. This is not required. 
+ 
+ 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 12 
+Grading & Submission 
+ 
+Submission Requirements 
+Your project will be evaluated through the following deliverables: 
+• Code: Submitted on Marmoset. Make sure your program compiles and runs before 
+submitting. 
+• Demo: A live demonstration of your working program to the course staff. 
+• Report: See the separate Phase 1 and Phase 2 Report Requirement documents. 
+ 
+If Things Go Wrong 
+If time is running short, here is the suggested order of priorities: 
+1.  Reading and displaying a vault level with Spectres, scrolls, rune fragments, and descent 
+point at specified locations. 
+2.  A general-purpose Arcanist, Spectre enemies, and items (no special types yet). 
+3.  Movement and interaction (combat, scroll use, fragment collection) for the generalized 
+versions. 
+4.  Different Arcanist classes and Spectre types. 
+5.  Different scroll and rune fragment types. 
+6.  Random level generation. 
+ 
+Grading note:  Accomplishing the first three points should earn at least 50%, assuming good object -
+oriented principles. A program that runs but is incomplete always receives a higher mark than one 
+that attempts everything but does not compile. 
+ 
+If Things Go Well (Bonus Features) 
+If you complete the full specification, you may implement bonus features for extra credit. You 
+must support play both with and without your bonus features; recompilation with different flags is 
+not permitted. 
+• Curses library: Use a curses/ncurses library for real-time WASD controls. 
+• Inventory system: Allow the Arcanist to carry multiple scrolls; add new relic-type items. 
+• Spectre intelligence: Give Spectres the ability to pursue the Arcanist across corridors. 
+• Lich trading: Allow Liches to exchange rune fragments for scroll hints before hostilities 
+are declared. 
+• Prestige system: Add a class upgrade mechanic (e.g., Sage → Archmage) that unlocks 
+after reaching level 3. 
+• Additional classes, Spectres, or items that pose interesting OOP design challenges. 
+ 
+Note:  To earn significant credit, enhancements must be algorithmically complex or solve an 
+interesting OOP design problem. Trivial additions will not earn a significant fraction of available 
+marks. 
+CS247 – RuneVault  | Project Specification 
+CS247 – Software Engineering Principles  |  University of Waterloo RuneVault Project Specification
+ Page 13 
+ 
+A Note on Random Generation 
+This project requires pseudo-random number generation. See the provided shuffle.cc for an 
+example of seeding and using a random number generator. The generator should be seeded 
+once at startup. Runs started with the same seed will produce identical sequences of random 
+events. 

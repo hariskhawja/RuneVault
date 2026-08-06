@@ -274,6 +274,7 @@ void Spawner::placeScrolls(Model & /*model*/, Level &level) {
     // against the (here impossible) case of running out of free floor tiles.
     for (int i = 0; i < kScrollCount; ++i) {
         Position tile;
+        // writes random position into tile
         if (!pickFreeFloorTile(level.board(), kAnyChamber, tile)) {
             break; // no free floor tile left — stop gracefully (won't occur)
         }
@@ -304,6 +305,7 @@ void Spawner::placeFragments(Model & /*model*/, Level &level) {
     // 4.8), guarded against running out of tiles (won't occur at these counts).
     for (int i = 0; i < kFragmentPileCount; ++i) {
         Position tile;
+        // writes random position into tile
         if (!pickFreeFloorTile(level.board(), kAnyChamber, tile)) {
             break; // no free floor tile left — stop gracefully (won't occur)
         }
@@ -382,6 +384,7 @@ void Spawner::placeSpectres(Model & /*model*/, Level &level) {
         // it uniformly. pickFreeFloorTile(kAnyChamber) does exactly that and
         // also reports the chamber via the tile's cell membership.
         Position tile;
+        // writes random position into tile
         if (!pickFreeFloorTile(level.board(), kAnyChamber, tile)) {
             break; // no free floor tile left — stop gracefully (won't occur)
         }

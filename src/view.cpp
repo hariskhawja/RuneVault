@@ -188,7 +188,7 @@ std::vector<std::string> View::buildStatusRows(const StatusInfo &status) const {
     // Row layout across the bottom 5 rows (Requirement 2.2 / 2.8):
     //   row 0 : separator rule
     //   row 1 : class + FP + Pwr + WR
-    //   row 2 : total Rune Fragments
+    //   row 2 : total Rune Fragments + current level + last action entered
     //   row 3+: identified-scroll hints / messages (one per row, truncated)
     std::vector<std::string> rows;
     rows.reserve(static_cast<std::size_t>(kStatusRows));
@@ -205,8 +205,12 @@ std::vector<std::string> View::buildStatusRows(const StatusInfo &status) const {
                         "   WR: " + std::to_string(status.wr);
     rows.push_back(fitToWidth(stats, kFrameCols));
 
-    // Total Rune Fragments collected.
-    std::string rf = "Rune Fragments: " + std::to_string(status.runeFragmentTotal);
+    // Total Rune Fragments collected, the current vault level, and the action
+    // the player just entered (all on one row).
+    std::string rf = "Rune Fragments: " + std::to_string(status.runeFragmentTotal) +
+                     "   Level: " + std::to_string(status.levelNumber) +
+                     "   Action: " +
+                     (status.lastAction.empty() ? "-" : status.lastAction);
     rows.push_back(fitToWidth(rf, kFrameCols));
 
     // Remaining rows: scroll hints / messages, most recent first, one per line.

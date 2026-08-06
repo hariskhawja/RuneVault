@@ -1,0 +1,249 @@
+@startuml RuneVault_Decorators_Visitors_Spectres
+skinparam classAttributeIconSize 0
+hide empty members
+
+' ===================== EXTERNAL DEPENDENCIES =====================
+class Model
+class Level
+class Board
+class GuardedItem
+class Game
+class Position
+enum ScrollType
+
+' ======================= ARCANIST + STRATEGY =======================
+class Arcanist {
+  +Arcanist(fp, pwr, wr : int)
+  +Arcanist(fp, pwr, wr : int, s : unique_ptr<ArcanistClassStrategy>)
+  +fp() : int
+  +maxFp() : int
+  +pwr() : int
+  +wr() : int
+  +isDead() : bool
+  +reduceFp(amount : int) : void
+  +applyDamage(rawDamage : int) : void
+  +healUpTo(amount : int) : void
+  +loseUpTo(amount : int) : void
+  +addPwr(delta : int) : void
+  +addWr(delta : int) : void
+  +applyPromotionBonus(fp, pwr, wr : int) : void
+  +hasStrategy() : bool
+  +strategy() : const ArcanistClassStrategy&
+  +setStrategy(s : unique_ptr<ArcanistClassStrategy>) : void
+  -fp_ : int
+  -maxFp_ : int
+  -pwr_ : int
+  -wr_ : int
+  -strategy_ : unique_ptr<ArcanistClassStrategy>
+}
+
+abstract class ArcanistClassStrategy {
+  +{abstract} scoreModifier(raw : int) : int
+  +{abstract} scrollEffectModifier(t : ScrollType, baseDelta : int) : int
+  +{abstract} damageTakenModifier(incoming : int) : int
+  +{abstract} className() : string
+  +{abstract} classKey() : char
+}
+
+class SageStrategy
+class HexbladeStrategy
+class WardenStrategy
+class VoidwalkerStrategy
+class ArchmageStrategy
+class WarlockStrategy
+class BastionStrategy
+class VoidlordStrategy
+
+class ArcanistFactory {
+  +{static} create(classKey : char) : shared_ptr<Arcanist>
+}
+
+' ===================== DECORATOR (SCROLL EFFECTS) =====================
+abstract class ArcanistComponent {
+  +{abstract} effPwr() : int
+  +{abstract} effWr() : int
+  +{abstract} base() : Arcanist&
+}
+
+class BaseArcanistComponent {
+  +BaseArcanistComponent(a : shared_ptr<Arcanist>)
+  +effPwr() : int
+  +effWr() : int
+  +base() : Arcanist&
+  -arcanist_ : shared_ptr<Arcanist>
+}
+
+abstract class ScrollDecorator {
+  +ScrollDecorator(inner : shared_ptr<ArcanistComponent>)
+  #inner_ : shared_ptr<ArcanistComponent>
+}
+
+class SurgePower {
+  -delta_ : int
+}
+class FortifyWard {
+  -delta_ : int
+}
+class SapPower {
+  -delta_ : int
+}
+class ErodeWard {
+  -delta_ : int
+}
+
+' ======================= COMBAT VISITOR =======================
+class CombatVisitor {
+  +CombatVisitor(model : Model&)
+  +visit(s : Wraith&) : void
+  +visit(s : Banshee&) : void
+  +visit(s : Revenant&) : void
+  +visit(s : Shade&) : void
+  +visit(s : Lich&) : void
+  +visit(s : VaultAnchor&) : void
+  +visit(s : SpecterLord&) : void
+  -model_ : Model&
+}
+
+' ======================= SPECTRES + FACTORY =======================
+abstract class Spectre {
+  +Spectre(t : SpectreType, fp, pwr, wr, spawnChamber : int, pos : Position)
+  +{abstract} accept(v : CombatVisitor&) : void
+  +{abstract} symbol() : char
+  +type() : SpectreType
+  +fp() : int
+  +pwr() : int
+  +wr() : int
+  +takeDamage(dmg : int) : void
+  +isDead() : bool
+  +spawnChamber() : int
+  +position() : Position
+  +moveTo(p : Position) : void
+  +isMobile() : bool
+  +guardedItemPosition() : Position
+  +setGuardedItemPosition(p : const Position&) : void
+  +runeDrop() : int
+  +isDefaultHostile() : bool
+  +carriesCipherGem() : bool
+  +setCarriesCipherGem(v : bool) : void
+  -type_ : SpectreType
+  -fp_ : int
+  -pwr_ : int
+  -wr_ : int
+  -spawnChamber_ : int
+  -pos_ : Position
+  -guardedItemPos_ : Position
+  -carriesCipherGem_ : bool
+}
+
+class GenericSpectre {
+  -symbol_ : char
+}
+
+class Wraith
+class Banshee
+class Revenant
+class Shade
+
+class Lich {
+  +runeDrop() : int
+  +isDefaultHostile() : bool
+}
+
+class VaultAnchor {
+  +isMobile() : bool
+  +runeDrop() : int
+  +isDefaultHostile() : bool
+}
+
+class SpecterLord
+
+enum SpectreType {
+  Wraith
+  Banshee
+  Revenant
+  Shade
+  Lich
+  VaultAnchor
+  SpecterLord
+}
+
+class SpectreFactory {
+  +create(t : SpectreType, chamberId : int, pos : Position) : unique_ptr<Spectre>
+  +createRandom(chamberId : int, pos : Position) : unique_ptr<Spectre>
+}
+
+' ======================= SPAWNER =======================
+class Spawner {
+  +populate(model : Model&) : void
+  +populateActorsOnly(model : Model&) : void
+  +{static} chooseAegisLevel() : int
+  -placeArcanist(model : Model&, level : Level&) : void
+  -placeStairway(model : Model&, level : Level&) : void
+  -placeScrolls(model : Model&, level : Level&) : void
+  -placeFragments(model : Model&, level : Level&) : void
+  -placeSpectres(model : Model&, level : Level&) : void
+  -placeAegisCloak(model : Model&, level : Level&) : void
+  -selectCipherGemCarrier(level : Level&) : void
+  -placeGuarded(level : Level&, item : unique_ptr<GuardedItem>, chamberId : int) : GuardedItem*
+  -occupied_ : set<pair<int,int>>
+  -arcanistChamber_ : int
+}
+
+' ============================ RELATIONSHIPS ============================
+' -- Arcanist + Strategy pattern --
+Arcanist *-- "0..1" ArcanistClassStrategy : strategy (unique_ptr)
+ArcanistClassStrategy <|-- SageStrategy
+ArcanistClassStrategy <|-- HexbladeStrategy
+ArcanistClassStrategy <|-- WardenStrategy
+ArcanistClassStrategy <|-- VoidwalkerStrategy
+ArcanistClassStrategy <|-- ArchmageStrategy
+ArcanistClassStrategy <|-- WarlockStrategy
+ArcanistClassStrategy <|-- BastionStrategy
+ArcanistClassStrategy <|-- VoidlordStrategy
+ArcanistFactory ..> Arcanist : creates
+ArcanistFactory ..> ArcanistClassStrategy : attaches
+Game ..> ArcanistFactory : uses
+Model o-- "0..1" Arcanist : baseArcanist (shared_ptr)
+
+' -- Decorator pattern (scroll effects) --
+Model *-- "0..1" ArcanistComponent : activeArcanist chain head
+
+ArcanistComponent <|-- BaseArcanistComponent
+ArcanistComponent <|-- ScrollDecorator
+ScrollDecorator o-- "1" ArcanistComponent : inner_ (chain)
+ScrollDecorator <|-- SurgePower
+ScrollDecorator <|-- FortifyWard
+ScrollDecorator <|-- SapPower
+ScrollDecorator <|-- ErodeWard
+
+BaseArcanistComponent o-- "1" Arcanist : adapts (shared_ptr)
+
+' -- Visitor pattern (combat) --
+Model ..> CombatVisitor : creates on attack
+CombatVisitor o-- "1" Model
+CombatVisitor ..> Spectre : visit(concrete)
+Spectre ..> CombatVisitor : accept (double dispatch)
+
+' -- Spectre hierarchy + Factory --
+Spectre <|-- GenericSpectre
+Spectre <|-- Wraith
+Spectre <|-- Banshee
+Spectre <|-- Revenant
+Spectre <|-- Shade
+Spectre <|-- Lich
+Spectre <|-- VaultAnchor
+Spectre <|-- SpecterLord
+Spectre --> SpectreType
+SpectreFactory ..> Spectre : creates
+Level *-- "0..*" Spectre
+Model ..> Spectre : combat / movement
+
+' -- Spawner services --
+Spawner ..> Model
+Spawner ..> Level
+Spawner ..> SpectreFactory
+Spawner ..> GuardedItem
+Spawner ..> Board
+Game ..> Spawner : uses
+Model ..> Spawner : uses
+@enduml

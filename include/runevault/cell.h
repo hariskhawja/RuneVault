@@ -35,7 +35,7 @@ namespace runevault {
 
 // The five kinds of tile that make up a vault level (design geometry table).
 enum class CellType {
-    Wall,     // vault wall — `|` / `-`; blocks movement
+    Wall,     // vault wall — `|` / `-`; blocks movement; ' ' also considered as wall
     Archway,  // `+` — corridor/chamber junction; walkable, transit only
     Corridor, // `#` — connects chambers; walkable, transit only
     Floor,    // `.` — the only cell that hosts actors/items

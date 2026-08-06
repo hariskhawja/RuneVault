@@ -109,6 +109,10 @@ void Game::startNewRun(char classKey) {
     // state leaks in (the reset primitive shared with the `r` restart path).
     resetRun();
 
+    // No action has been taken yet on a fresh run, so the status area's
+    // "Action:" field starts empty (rendered as "-").
+    lastAction_.clear();
+
     // Project spec (WITH/WITHOUT bonus, no recompile): resetRun() above did
     // `model_ = Model()`, which reset the fresh Model's bonus flag to false, so
     // re-apply the Game's bonus setting here on EVERY new/restarted run. This
@@ -164,6 +168,12 @@ Game::SessionAction Game::playLoop() {
             return SessionAction::Restart;
         }
 
+        // Record the entered command for the status area's "Action:" field. The
+        // `u`/`a` branches of dispatchCommand append their direction token, so
+        // the echoed action reads e.g. "a ne". Recorded regardless of whether
+        // the command succeeds or is a no-op.
+        lastAction_ = cmd;
+
         // Snapshot the level number so we can tell whether the player's move
         // triggered a descent (moveArcanist -> tryDescend rebuilds the level).
         const int levelBefore = model_.levelNumber();
@@ -213,6 +223,7 @@ bool Game::dispatchCommand(const std::string &cmd) {
     if (cmd == "u") {
         std::string dir;
         if (in_ >> dir) {
+            lastAction_ = cmd + " " + dir; // echo the full command (e.g. "u no")
             // useScroll returns false when there is no scroll one step in that
             // direction (Requirements 8.2/11.4) — a no-op, turn not consumed.
             // An unrecognized direction token is likewise a no-op (false).
@@ -223,6 +234,7 @@ bool Game::dispatchCommand(const std::string &cmd) {
     if (cmd == "a") {
         std::string dir;
         if (in_ >> dir) {
+            lastAction_ = cmd + " " + dir; // echo the full command (e.g. "a ne")
             try {
                 // handleAttack returns false when there is no adjacent living
                 // Spectre to strike (Requirements 6.3/11.4): a no-op, turn not
@@ -345,6 +357,10 @@ StatusInfo Game::buildStatus() const {
         }
     }
     status.runeFragmentTotal = model_.runeFragmentTotal();
+    // Current vault level and the command the player just entered, both shown
+    // on the Rune Fragments row of the status area.
+    status.levelNumber = model_.levelNumber();
+    status.lastAction = lastAction_;
     return status;
 }
 

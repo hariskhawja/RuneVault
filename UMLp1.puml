@@ -1,0 +1,348 @@
+@startuml RuneVault_Core
+skinparam classAttributeIconSize 0
+hide empty members
+
+' ===================== EXTERNAL DEPENDENCIES =====================
+class ArcanistComponent
+class CombatVisitor
+class Spectre
+class Spawner
+class Arcanist
+class ArcanistFactory
+
+' ============================ MVC CORE ============================
+class Game {
+  +Game(istream& = cin, ostream& = cout)
+  +useLayout(layout : const LoadedLayout&) : void
+  +run() : int
+  -promptClassSelection() : char
+  -resetRun() : void
+  -startNewRun(classKey : char) : void
+  -playLoop() : SessionAction
+  -dispatchCommand(cmd : string) : bool
+  -reportOutcome() : void
+  -playAgainPrompt() : bool
+  -redraw() : void
+  -buildOverlay() : RenderOverlay
+  -buildStatus() : StatusInfo
+  -in_ : istream&
+  -out_ : ostream&
+  -model_ : Model
+  -view_ : View
+  -hasLayout_ : bool
+  -layout_ : LoadedLayout
+}
+
+enum SessionAction {
+  Quit
+  Restart
+  RunEnded
+}
+
+class Model {
+  +Model()
+  +arcanist() : shared_ptr<Arcanist>&
+  +setArcanist(a : shared_ptr<Arcanist>) : void
+  +activeArcanist() : ArcanistComponent*
+  +setActiveArcanist(c : shared_ptr<ArcanistComponent>) : void
+  +resetActiveArcanistToBase() : void
+  +effectivePwr() : int
+  +effectiveWr() : int
+  +level() : Level*
+  +setLevel(l : unique_ptr<Level>) : void
+  +setLayout(l : const LoadedLayout*) : void
+  +buildCurrentLevel() : void
+  +levelNumber() : int
+  +arcanistPosition() : Position
+  +moveArcanist(d : Direction) : bool
+  +useScroll(d : Direction) : bool
+  +descend() : bool
+  +onStairway() : bool
+  +tryDescend() : bool
+  +handleAttack(d : Direction) : bool
+  +spectreDamageIfHit(s : const Spectre&) : int
+  +resolveSpectreAttack(s : Spectre&) : bool
+  +isHostile(s : const Spectre&) : bool
+  +advanceSpectres() : void
+  +runeFragmentTotal() : int
+  +addRuneFragments(amount : int) : void
+  +revealStairwayIfCarryingGem() : void
+  +markScrollIdentified(t : ScrollType) : void
+  +isScrollIdentified(t : ScrollType) : bool
+  -baseArcanist_ : shared_ptr<Arcanist>
+  -activeArcanist_ : shared_ptr<ArcanistComponent>
+  -level_ : unique_ptr<Level>
+  -layout_ : const LoadedLayout*
+  -levelNumber_ : int
+  -runeFragmentTotal_ : int
+  -arcanistPos_ : Position
+  -identifiedScrolls_ : set<ScrollType>
+  -runState_ : RunState
+  -carryingCipherGem_ : bool
+  -carryingAegisCloak_ : bool
+  -promoted_ : bool
+}
+
+enum RunState {
+  Playing
+  Won
+  Lost
+}
+
+class View {
+  +View(ansiColour : bool = false)
+  +renderFrame(l : const Level&, o : const RenderOverlay&) : string
+  +renderFrame(l : const Level&, o : const RenderOverlay&, s : const StatusInfo&) : string
+  +render(os : ostream&, l : const Level&, o : const RenderOverlay&) : void
+  -cellGlyph(b : const Board&, p : const Position&) : char
+  -wallGlyph(b : const Board&, p : const Position&) : char
+  -decorate(glyph : char) : string
+  -ansiColour_ : bool
+}
+
+class StatusInfo <<struct>> {
+  className
+  fp
+  maxFp
+  pwr
+  wr
+  runeFragmentTotal
+  messages
+}
+
+class RenderOverlay <<struct>> {
+  glyphs : vector<pair<Position,char>>
+}
+
+' ============================ LEVEL / BOARD ============================
+class Level {
+  +Level(board : Board)
+  +board() : const Board&
+  +stairway() : Position
+  +setStairway(p : const Position&) : void
+  +stairwayRevealed() : bool
+  +setStairwayRevealed(r : bool) : void
+  +addItem(i : unique_ptr<Item>) : void
+  +items() : const vector<unique_ptr<Item>>&
+  +itemAt(p : const Position&) : Item*
+  +removeItemAt(p : const Position&) : unique_ptr<Item>
+  +addSpectre(s : unique_ptr<Spectre>) : void
+  +spectres() : const vector<unique_ptr<Spectre>>&
+  +spectreAt(p : const Position&) : Spectre*
+  +removeDeadSpectres() : void
+  -board_ : Board
+  -stairway_ : Position
+  -stairwayRevealed_ : bool
+  -items_ : vector<unique_ptr<Item>>
+  -spectres_ : vector<unique_ptr<Spectre>>
+}
+
+class "makeDefaultBoard()" as LevelFactory <<free function>>
+
+class Board {
+  +Board(rows : int = 25, cols : int = 79)
+  +rows() : int
+  +cols() : int
+  +inBounds(p : const Position&) : bool
+  +at(p : const Position&) : const Cell&
+  +setCell(p : const Position&, type : CellType, chamberId : int = kNoChamber) : void
+  +chamberIds() : vector<int>
+  +chamberFloorTiles(chamberId : int) : vector<Position>
+  +walkableNeighbours(p : const Position&) : vector<Position>
+  +floorNeighboursInChamber(p : const Position&, chamberId : int) : vector<Position>
+  -rows_ : int
+  -cols_ : int
+  -grid_ : vector<vector<Cell>>
+}
+
+class Cell <<struct>> {
+  +type : CellType
+  +chamberId : int
+  +isWalkable() : bool
+  +canHost() : bool
+}
+
+enum CellType {
+  Wall
+  Archway
+  Corridor
+  Floor
+  Stairway
+}
+
+class Geometry <<namespace/utility>> {
+  +{static} step(p : const Position&, d : Direction) : Position
+  +{static} neighbours(p : const Position&) : array<Position,8>
+  +{static} isAdjacent(a, b : const Position&) : bool
+  +{static} parse(token : string) : Direction
+}
+
+class Position <<struct>> {
+  +row : int
+  +col : int
+}
+
+enum Direction {
+  No
+  So
+  Ea
+  We
+  Ne
+  Nw
+  Se
+  Sw
+}
+
+' ============================ ITEMS + STATE ============================
+abstract class Item {
+  +{abstract} symbol() : char
+  +position() : Position
+  +setPosition(p : const Position&) : void
+  +{abstract} onWalkOver(model : Model&) : bool
+  +blocksArcanist() : bool
+  #position_ : Position
+}
+
+class RuneFragment {
+  +RuneFragment(value : int)
+  +RuneFragment(grade : FragmentGrade)
+  +value() : int
+  -value_ : int
+}
+
+class Scroll {
+  +Scroll(type : ScrollType)
+  +scrollType() : ScrollType
+  -type_ : ScrollType
+}
+
+abstract class GuardedItem {
+  +GuardedItem(startUnlocked : bool = false)
+  +isUnlocked() : bool
+  +onAnchorDeath() : void
+  +onWalkOver(model : Model&) : bool
+  +tryCollect(model : Model&) : bool
+  +collected() : bool
+  #{abstract} applyCollectionEffect(model : Model&) : void
+  #{abstract} collectionMessage() : string
+  -state_ : unique_ptr<GuardState>
+  -collected_ : bool
+}
+
+class ShardCoffer {
+  +value() : int
+}
+
+class AegisCloak
+class CipherGem
+
+abstract class GuardState {
+  +{abstract} canCollect() : bool
+}
+class LockedState
+class UnlockedState
+
+enum ScrollType {
+  AttuneFocus
+  SurgePower
+  FortifyWard
+  DrainFocus
+  SapPower
+  ErodeWard
+}
+
+enum FragmentGrade {
+  CommonShard
+  ResonantShard
+  LichCache
+  ShardCoffer
+}
+
+' ============================ SUPPORT / SERVICES ============================
+class LayoutLoader {
+  +{static} loadFromFile(path : string) : LoadedLayout
+  +{static} loadFromString(contents : string) : LoadedLayout
+  +{static} buildLevel(loaded : const LoadedLayout&, levelIndex : int) : unique_ptr<Level>
+  +{static} makeItemForDigit(digit : char) : unique_ptr<Item>
+}
+
+class LoadedLayout <<struct>> {
+  +ok : bool
+  +error : string
+  +boards : array<Board,5>
+  +items : array<vector<ItemPlacement>,5>
+}
+
+class ItemPlacement <<struct>> {
+  +position : Position
+  +digit : char
+}
+
+class Combat <<namespace/utility>> {
+  +{static} computeDamage(attackerPwr, defenderWr : int) : int
+  +{static} applyDamageTakenOrdering(base : int, isWarden, carryingAegis : bool) : int
+}
+
+class NotificationLog <<singleton>> {
+  +{static} instance() : NotificationLog&
+  +push(message : string) : void
+  +messages() : const vector<string>&
+  +displayMessages() : vector<string>
+  +clear() : void
+  +empty() : bool
+  -messages_ : vector<string>
+}
+
+' ============================ RELATIONSHIPS ============================
+Game *-- "1" Model
+Game *-- "1" View
+Game *-- "1" LoadedLayout
+Game ..> ArcanistFactory : uses
+Game ..> Spawner : uses
+Game ..> LayoutLoader : uses
+
+Model o-- "0..1" Arcanist : baseArcanist (shared_ptr)
+Model *-- "0..1" ArcanistComponent : activeArcanist chain head
+Model *-- "0..1" Level : level (unique_ptr)
+Model --> "0..1" LoadedLayout : layout (non-owning)
+Model ..> Spawner : uses
+Model ..> CombatVisitor : creates on attack
+Model ..> Combat : uses
+Model ..> LayoutLoader : buildCurrentLevel
+Model ..> NotificationLog : notify
+Model ..> Spectre : combat / movement
+
+View ..> Level : renders
+View ..> Board
+View ..> StatusInfo
+View ..> RenderOverlay
+
+Level *-- "1" Board
+Level *-- "0..*" Item
+Level *-- "0..*" Spectre
+LevelFactory ..> Board : builds
+Board *-- "rows*cols" Cell
+Board ..> Geometry : uses
+Cell --> CellType
+Geometry ..> Position
+Geometry ..> Direction
+
+Item <|-- RuneFragment
+Item <|-- Scroll
+Item <|-- GuardedItem
+GuardedItem <|-- ShardCoffer
+GuardedItem <|-- AegisCloak
+GuardedItem <|-- CipherGem
+GuardedItem *-- "1" GuardState : state (unique_ptr)
+GuardState <|-- LockedState
+GuardState <|-- UnlockedState
+Item ..> Model : onWalkOver
+Scroll --> ScrollType
+RuneFragment ..> FragmentGrade
+
+LayoutLoader ..> LoadedLayout : produces
+LayoutLoader ..> Item : makeItemForDigit
+LayoutLoader ..> Level : buildLevel
+LoadedLayout *-- "5" Board
+LoadedLayout *-- "0..*" ItemPlacement
+@enduml

@@ -173,6 +173,13 @@ private:
     // total) the View status area displays (Requirement 2.8).
     StatusInfo buildStatus() const;
 
+    // The raw command the player entered most recently this run, echoed in the
+    // status area as "Action: <cmd>". Recorded for EVERY turn command whether it
+    // succeeded or was a no-op (the spec's status area is free-form, and showing
+    // the attempted action helps the player see that input registered). Cleared
+    // at the start of each new/restarted run.
+    std::string lastAction_;
+
     std::istream &in_;
     std::ostream &out_;
     Model model_;

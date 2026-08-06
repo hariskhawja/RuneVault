@@ -19,7 +19,7 @@
 //   * visit(VaultAnchor&) — documented hook for unlocking guarded items on Anchor
 //                           death (Requirement 6.12 / design). The guarded-item
 //                           State machine (Locked->Unlocked) is task 13.2 and the
-//                           actual wiring is task 13.3; for now this is a no-op hook.
+//                           actual wiring is task 13.3
 //   * all other visits    — no-ops. The design "e.g." abilities (Wraith FP drain,
 //                           Banshee ward reduction, Shade rune-fragment theft) are
 //                           optional flavor, not required by 6.12/7.7, so they are

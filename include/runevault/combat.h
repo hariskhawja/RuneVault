@@ -5,7 +5,6 @@
 //   * Warden/Aegis damage-taken ordering (task 7.3),
 //   * Arcanist attack resolution and the no-op case (task 7.5),
 //   * Spectre attack, 50% miss, and loss-on-zero-FP (task 7.6).
-// For now it provides only the pure, side-effect-free damage function.
 //
 // Damage formula (design "Combat Resolution", Requirements 6.2 and 6.6):
 //

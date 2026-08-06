@@ -1,0 +1,187 @@
+@startuml RuneVault
+skinparam classAttributeIconSize 0
+hide empty members
+
+' ============================ MVC CORE ============================
+class Game
+enum SessionAction
+class Model
+enum RunState
+class View
+class StatusInfo <<struct>>
+class RenderOverlay <<struct>>
+
+' ======================= ARCANIST + STRATEGY =======================
+class Arcanist
+abstract class ArcanistClassStrategy
+
+class SageStrategy
+class HexbladeStrategy
+class WardenStrategy
+class VoidwalkerStrategy
+class ArchmageStrategy
+class WarlockStrategy
+class BastionStrategy
+class VoidlordStrategy
+
+class ArcanistFactory
+
+' ===================== DECORATOR (SCROLL EFFECTS) =====================
+abstract class ArcanistComponent
+class BaseArcanistComponent
+abstract class ScrollDecorator
+
+class SurgePower
+class FortifyWard
+class SapPower
+class ErodeWard
+
+' ============================ LEVEL / BOARD ============================
+class Level
+class "makeDefaultBoard()" as LevelFactory <<free function>>
+class Board
+class Cell <<struct>>
+enum CellType
+class Geometry <<namespace/utility>>
+class Position <<struct>>
+enum Direction
+
+' ============================ ITEMS + STATE ============================
+abstract class Item
+class RuneFragment
+class Scroll
+abstract class GuardedItem
+class ShardCoffer
+class AegisCloak
+class CipherGem
+abstract class GuardState
+class LockedState
+class UnlockedState
+
+enum ScrollType
+enum FragmentGrade
+
+' ======================= SPECTRES + VISITOR/FACTORY =======================
+abstract class Spectre
+class GenericSpectre
+class Wraith
+class Banshee
+class Revenant
+class Shade
+class Lich
+class VaultAnchor
+class SpecterLord
+enum SpectreType
+class SpectreFactory
+class CombatVisitor
+
+' ============================ SUPPORT / SERVICES ============================
+class Spawner
+class LayoutLoader
+class LoadedLayout <<struct>>
+class ItemPlacement <<struct>>
+class Combat <<namespace/utility>>
+class NotificationLog <<singleton>>
+
+' ============================ RELATIONSHIPS ============================
+' -- MVC ownership (composition = by value / unique_ptr) --
+Game *-- "1" Model
+Game *-- "1" View
+Game *-- "1" LoadedLayout
+Game ..> ArcanistFactory : uses
+Game ..> Spawner : uses
+Game ..> LayoutLoader : uses
+
+Model o-- "0..1" Arcanist : baseArcanist (shared_ptr)
+Model *-- "0..1" ArcanistComponent : activeArcanist chain head
+Model *-- "0..1" Level : level (unique_ptr)
+Model --> "0..1" LoadedLayout : layout (non-owning)
+Model ..> Spawner : uses
+Model ..> CombatVisitor : creates on attack
+Model ..> Combat : uses
+Model ..> LayoutLoader : buildCurrentLevel
+Model ..> NotificationLog : notify
+Model ..> Spectre : combat / movement
+
+View ..> Level : renders
+View ..> Board
+View ..> StatusInfo
+View ..> RenderOverlay
+
+' -- Arcanist + Strategy pattern --
+Arcanist *-- "0..1" ArcanistClassStrategy : strategy (unique_ptr)
+ArcanistClassStrategy <|-- SageStrategy
+ArcanistClassStrategy <|-- HexbladeStrategy
+ArcanistClassStrategy <|-- WardenStrategy
+ArcanistClassStrategy <|-- VoidwalkerStrategy
+ArcanistClassStrategy <|-- ArchmageStrategy
+ArcanistClassStrategy <|-- WarlockStrategy
+ArcanistClassStrategy <|-- BastionStrategy
+ArcanistClassStrategy <|-- VoidlordStrategy
+ArcanistFactory ..> Arcanist : creates
+ArcanistFactory ..> ArcanistClassStrategy : attaches
+
+' -- Decorator pattern (scroll effects) --
+ArcanistComponent <|-- BaseArcanistComponent
+ArcanistComponent <|-- ScrollDecorator
+ScrollDecorator o-- "1" ArcanistComponent : inner_ (chain)
+ScrollDecorator <|-- SurgePower
+ScrollDecorator <|-- FortifyWard
+ScrollDecorator <|-- SapPower
+ScrollDecorator <|-- ErodeWard
+BaseArcanistComponent o-- "1" Arcanist : adapts (shared_ptr)
+
+' -- Level / Board / Cell composition --
+Level *-- "1" Board
+Level *-- "0..*" Item
+Level *-- "0..*" Spectre
+LevelFactory ..> Board : builds
+Board *-- "rows*cols" Cell
+Board ..> Geometry : uses
+Cell --> CellType
+Geometry ..> Position
+Geometry ..> Direction
+
+' -- Item hierarchy + State pattern --
+Item <|-- RuneFragment
+Item <|-- Scroll
+Item <|-- GuardedItem
+GuardedItem <|-- ShardCoffer
+GuardedItem <|-- AegisCloak
+GuardedItem <|-- CipherGem
+GuardedItem *-- "1" GuardState : state (unique_ptr)
+GuardState <|-- LockedState
+GuardState <|-- UnlockedState
+Item ..> Model : onWalkOver
+Scroll --> ScrollType
+RuneFragment ..> FragmentGrade
+
+' -- Spectre hierarchy + Visitor + Factory --
+Spectre <|-- GenericSpectre
+Spectre <|-- Wraith
+Spectre <|-- Banshee
+Spectre <|-- Revenant
+Spectre <|-- Shade
+Spectre <|-- Lich
+Spectre <|-- VaultAnchor
+Spectre <|-- SpecterLord
+Spectre --> SpectreType
+Spectre ..> CombatVisitor : accept (double dispatch)
+SpectreFactory ..> Spectre : creates
+CombatVisitor o-- "1" Model
+CombatVisitor ..> Spectre : visit(concrete)
+
+' -- Spawner services --
+Spawner ..> Model
+Spawner ..> Level
+Spawner ..> SpectreFactory
+Spawner ..> GuardedItem
+Spawner ..> Board
+
+' -- Layout loading --
+LayoutLoader ..> LoadedLayout : produces
+LayoutLoader ..> Item : makeItemForDigit
+LayoutLoader ..> Level : buildLevel
+LoadedLayout *-- "5" Board
+LoadedLayout *-- "0..*" ItemPlacement
+@enduml

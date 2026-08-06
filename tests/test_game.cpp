@@ -222,10 +222,11 @@ RV_TEST(game_full_redraw_after_every_command) {
     RV_CHECK(contains(text, "@")); // the board was rendered each time
 }
 
-// --- Requirement 11.4: an invalid command is ignored and redraws unchanged --
-// A garbage token ("zzz") is not a valid command: it must not change any state
-// (no turn consumed) but still triggers a full redraw. So after "s zzz q" the
-// board body of the post-invalid frame is byte-identical to the initial frame.
+// --- Requirement 11.4: an invalid command is ignored (no game-state change) --
+// A garbage token ("zzz") is not a valid command: it must not change any GAME
+// state (no turn consumed) but still triggers a full redraw. The status area's
+// "Action:" field DOES change, since it echoes whatever the player entered
+// (pass or fail) — so we compare the BOARD ROWS only, which must be identical.
 RV_TEST(game_invalid_command_redraws_without_state_change) {
     rng::seed(4242);
     std::istringstream in("s\nzzz\nq\n");
@@ -240,10 +241,53 @@ RV_TEST(game_invalid_command_redraws_without_state_change) {
 
     const std::vector<std::string> frames = splitFrames(text);
     RV_CHECK(frames.size() == 2u);
-    // The invalid command consumed no turn and changed nothing: the board body
-    // is identical before and after (Requirement 11.4).
-    RV_CHECK(stripPrompt(frames[0]) == frames[1]);
+
+    // Compare only the board portion (everything before the status area, which
+    // begins at the "Class:" row): the invalid command consumed no turn, so the
+    // board is unchanged (Requirement 11.4).
+    const std::string before = stripPrompt(frames[0]);
+    const std::string after = frames[1];
+    const std::string boardBefore = before.substr(0, before.find("Class:"));
+    const std::string boardAfter = after.substr(0, after.find("Class:"));
+    RV_CHECK(boardBefore == boardAfter);
+
+    // The Action field echoed the invalid input.
+    RV_CHECK(contains(text, "Action: zzz"));
     RV_CHECK(contains(text, "@")); // did not crash; board rendered
+}
+
+// --- Status area: Rune Fragments row also shows Level and Action -------------
+// The status area's Rune Fragments row carries the current vault level and the
+// command the player just entered ("Action: <cmd>"). On the very first frame no
+// action has been taken yet, so Action shows "-"; after a move it echoes it.
+RV_TEST(game_status_row_shows_level_and_action) {
+    rng::seed(4242);
+    std::istringstream in("s\nno\nq\n");
+    std::ostringstream out;
+    Game game(in, out);
+
+    game.run();
+    const std::string text = out.str();
+
+    // Level is shown alongside the Rune Fragment total (level 1 at run start).
+    RV_CHECK(contains(text, "Rune Fragments: "));
+    RV_CHECK(contains(text, "Level: 1"));
+    // The initial frame has no action yet; the post-move frame echoes "no".
+    RV_CHECK(contains(text, "Action: -"));
+    RV_CHECK(contains(text, "Action: no"));
+}
+
+// A directional `u`/`a` command echoes the FULL command including the direction.
+RV_TEST(game_status_action_includes_direction_token) {
+    rng::seed(4242);
+    std::istringstream in("s\na ne\nq\n");
+    std::ostringstream out;
+    Game game(in, out);
+
+    game.run();
+    const std::string text = out.str();
+
+    RV_CHECK(contains(text, "Action: a ne"));
 }
 
 // --- Requirement 11.1: a recognized movement command is dispatched + redrawn -

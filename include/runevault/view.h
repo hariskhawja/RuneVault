@@ -104,6 +104,12 @@ struct StatusInfo {
     int pwr = 0;                        // effective Power
     int wr = 0;                         // effective Ward Rating
     int runeFragmentTotal = 0;          // total Rune Fragments collected
+    int levelNumber = 1;                // current vault level (1..5), shown
+                                        // alongside the Rune Fragment total
+    std::string lastAction;             // the command the player just entered
+                                        // (shown as "Action: <cmd>"); whether it
+                                        // succeeded or was a no-op does not
+                                        // matter — it echoes the raw input
     std::vector<std::string> messages;  // scroll hints / messages (Req 2.8)
 };
 

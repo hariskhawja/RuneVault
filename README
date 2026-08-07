@@ -1,0 +1,20 @@
+# Commands
+
+```
+make            // Build the game binary (build/runevault[.exe]).
+make run        // Build and run the game.
+make test       // Build and run the assert-based test binary.
+make clean      // Remove build artifacts.
+```
+
+# Layout
+```
+./build/runevault layouts/<file name>.txt
+```
+
+# Bonus
+Notification Logs + Class Promotion
+
+```
+./build/runevault -bonus
+```

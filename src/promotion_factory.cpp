@@ -1,8 +1,3 @@
-// promotion_factory.cpp
-// RuneVault — the Prestige PROMOTION factory (bonus feature; Requirements
-// 14.1/14.2). See include/runevault/promotion_factory.h for the contract and
-// the base-class -> promotion mapping table.
-
 #include "runevault/promotion_factory.h"
 
 #include <memory>
@@ -18,8 +13,6 @@ void PromotionFactory::promote(Arcanist& a) {
         return;
     }
 
-    // Dispatch on the CURRENT class key. Each base class swaps to its promoted
-    // Strategy and buffs FP/Pwr/WR (Requirement 14.1 swap + "all stats buffed").
     switch (a.strategy().classKey()) {
     case 's': // Sage -> Archmage
         a.setStrategy(
@@ -42,9 +35,6 @@ void PromotionFactory::promote(Arcanist& a) {
         a.applyPromotionBonus(20, 10, 4);
         break;
     default:
-        // Already promoted (Archmage/Warlock/Bastion/Voidlord keep the base
-        // key) or an unknown key — no-op. The Model guards against calling
-        // promote() twice, so this branch is defensive.
         return;
     }
 }

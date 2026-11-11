@@ -1,23 +1,12 @@
-// cli_options.cpp
-// RuneVault — command-line argument parsing (task 18.1, Requirement 12).
-//
-// See cli_options.h for the documented argument convention. `parseArgs` is a
-// pure function: it inspects the tokens and fills a CliOptions value, without
-// performing any I/O or seeding.
-
 #include "runevault/cli_options.h"
 
-#include <stdexcept> // std::invalid_argument, std::out_of_range
+#include <stdexcept>
 #include <string>
 
 namespace runevault {
 
 namespace {
 
-// Strictly parse `token` as an unsigned long. Returns true and writes `out`
-// only when the ENTIRE token is a non-empty run of decimal digits with no
-// trailing junk (so "42x" and "" are rejected). std::stoul would happily stop
-// at the first non-digit, so we also verify it consumed every character.
 bool parseStrictUnsignedLong(const std::string &token, unsigned long &out) {
     if (token.empty()) {
         return false;
@@ -54,10 +43,6 @@ bool isSeedFlag(const std::string &token) {
 CliOptions parseArgs(int argc, char **argv) {
     CliOptions opts;
 
-    // Whether an EXPLICIT `-seed`/`--seed` flag claimed the seed slot. When
-    // set, a positional second token never overrides it (the flag wins — see
-    // the precedence note in cli_options.h). It is set even when the explicit
-    // seed value was invalid, so the flag still owns the seed slot.
     bool explicitSeedSet = false;
 
     // The positional (second bare token) seed candidate, deferred until after
@@ -65,9 +50,6 @@ CliOptions parseArgs(int argc, char **argv) {
     bool hasPositionalSeed = false;
     std::string positionalSeed;
 
-    // Count of BARE (non-flag) tokens seen so far. The 1st is the layout file,
-    // the 2nd is the positional seed; flag-looking tokens ('-'-prefixed,
-    // including `-bonus`) are skipped and never counted here.
     int bareIndex = 0;
 
     // Start at 1 to skip argv[0] (the program name).
@@ -92,7 +74,6 @@ CliOptions parseArgs(int argc, char **argv) {
                 opts.seed = parsed;
                 opts.seedError = false;
             } else {
-                // Non-numeric seed (Requirement 12.5): error + fall back later.
                 opts.hasSeed = false;
                 opts.seedError = true;
             }
@@ -107,9 +88,6 @@ CliOptions parseArgs(int argc, char **argv) {
             continue;
         }
 
-        // Any other flag-looking token (starts with '-') is not recognized;
-        // ignore it so future options can be added without breaking. Skipping
-        // it here also keeps it OUT of the bare-token count (below).
         if (!token.empty() && token[0] == '-') {
             continue;
         }
@@ -129,9 +107,6 @@ CliOptions parseArgs(int argc, char **argv) {
         ++bareIndex;
     }
 
-    // Apply the positional seed ONLY when no explicit `-seed` flag set the seed
-    // (flag-wins precedence). A non-numeric positional second token is a seed
-    // error, mirroring the explicit-flag behaviour (Requirement 12.5).
     if (!explicitSeedSet && hasPositionalSeed) {
         unsigned long parsed = 0;
         if (parseStrictUnsignedLong(positionalSeed, parsed)) {
@@ -147,11 +122,6 @@ CliOptions parseArgs(int argc, char **argv) {
     return opts;
 }
 
-// Requirement 12.5: IF a provided RNG seed argument is non-numeric, THEN report
-// the error and seed the generator from the system time instead. This helper
-// only handles the REPORTING half (message to `err`); the caller performs the
-// time fallback via rng::seed_from_time(). No message is written when there was
-// no seed error, keeping normal runs silent.
 bool reportSeedError(const CliOptions &opts, std::ostream &err) {
     if (!opts.seedError) {
         return false;

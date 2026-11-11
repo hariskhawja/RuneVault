@@ -1,40 +1,19 @@
-// shuffle.cc
-// RuneVault — pseudo-random number generation utilities.
-//
-// The generator is seeded once at program startup (or with a user-supplied
-// seed via the command line).  Every module that needs randomness should call
-// the free functions below rather than calling rand() / srand() directly.
-// This guarantees a single, reproducible sequence for a given seed, which is
-// required for the -testing flag and for save/load reproducibility.
-//
-// Usage:
-//   #include "shuffle.h"
-//   rng::seed(42);                        // seed once at startup
-//   int d = rng::range(1, 6);             // roll a die  [1, 6]
-//   bool hit = rng::chance(0.5);          // 50 % coin flip
-//   rng::shuffle(vec.begin(), vec.end()); // shuffle a container
-
 #include "shuffle.h"
 
-#include <algorithm>   // std::shuffle
-#include <chrono>      // std::chrono::steady_clock
-#include <stdexcept>   // std::invalid_argument
+#include <algorithm>
+#include <chrono>
+#include <stdexcept>
 
 namespace rng {
-
-// ── Internal state ─────────────────────────────────────────────────────────
 
 namespace {
 
 // Mersenne Twister — seeded in seed() below.
 std::mt19937 engine;
 
-// Track whether seed() has been called so we can warn in debug builds.
 bool seeded = false;
 
 } // anonymous namespace
-
-// ── Public API ─────────────────────────────────────────────────────────────
 
 void seed(unsigned long s) {
     engine.seed(static_cast<std::mt19937::result_type>(s));
@@ -50,8 +29,6 @@ std::mt19937 &get_engine() {
     return engine;
 }
 
-// ── Integer range [lo, hi] inclusive ───────────────────────────────────────
-
 int range(int lo, int hi) {
     if (lo > hi) {
         throw std::invalid_argument(
@@ -60,8 +37,6 @@ int range(int lo, int hi) {
     std::uniform_int_distribution<int> dist(lo, hi);
     return dist(engine);
 }
-
-// ── Floating-point range [lo, hi) ──────────────────────────────────────────
 
 double real(double lo, double hi) {
     if (lo >= hi) {
@@ -72,8 +47,6 @@ double real(double lo, double hi) {
     return dist(engine);
 }
 
-// ── Boolean with probability p of returning true  [0.0, 1.0] ──────────────
-
 bool chance(double p) {
     if (p < 0.0 || p > 1.0) {
         throw std::invalid_argument(
@@ -82,12 +55,6 @@ bool chance(double p) {
     std::bernoulli_distribution dist(p);
     return dist(engine);
 }
-
-// ── Weighted selection ─────────────────────────────────────────────────────
-//
-// Returns an index into the weights vector, sampled proportionally.
-// Example:
-//   rng::weighted({1, 2, 3}) → 0 with prob 1/6, 1 with prob 2/6, 2 with 3/6
 
 std::size_t weighted(const std::vector<double> &weights) {
     if (weights.empty()) {

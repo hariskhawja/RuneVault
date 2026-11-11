@@ -1,13 +1,7 @@
-// spectre.cpp
-// RuneVault — abstract Spectre base + generic placeholder (task 5.3).
-//
-// See include/runevault/spectre.h for the design rationale and the deliberate
-// omission of the Visitor `accept()` hook (task 10.2).
-
 #include "runevault/spectre.h"
 
-#include "runevault/combat_visitor.h" // CombatVisitor — for accept() double dispatch (task 10.2)
-#include "runevault/view.h" // runevault::glyphs — the DD-7 symbol map
+#include "runevault/combat_visitor.h"
+#include "runevault/view.h"
 
 namespace runevault {
 
@@ -63,7 +57,6 @@ void Spectre::moveTo(Position p) { pos_ = p; }
 
 bool Spectre::isMobile() const { return true; }
 
-// ---- Guarded item position (task 10.5, Requirements 7.5/7.6) ----
 Position Spectre::guardedItemPosition() const { return guardedItemPos_; }
 
 void Spectre::setGuardedItemPosition(const Position &p) { guardedItemPos_ = p; }
@@ -72,12 +65,9 @@ int Spectre::runeDrop() const { return 1; }
 
 bool Spectre::isDefaultHostile() const { return true; }
 
-// ---- Cipher Gem carrier (task 7.8, Requirement 6.12) ----
 bool Spectre::carriesCipherGem() const { return carriesCipherGem_; }
 
 void Spectre::setCarriesCipherGem(bool carries) { carriesCipherGem_ = carries; }
-
-// ---- GenericSpectre (placeholder; replaced by typed subclasses in task 10.1) --
 
 GenericSpectre::GenericSpectre(SpectreType t, int fp, int pwr, int wr,
                                int spawnChamber, Position pos, char symbol)
@@ -85,16 +75,7 @@ GenericSpectre::GenericSpectre(SpectreType t, int fp, int pwr, int wr,
 
 char GenericSpectre::symbol() const { return symbol_; }
 
-// GenericSpectre has no dedicated CombatVisitor::visit overload (it is a
-// test-only placeholder, task 5.3). Its accept() is a deliberate no-op: it does
-// not participate in type-specific visitor dispatch. Documented in spectre.h.
 void GenericSpectre::accept(CombatVisitor& /*v*/) { /* intentional no-op */ }
-
-// ---- Concrete typed Spectre subclasses (task 10.1) --------------------------
-//
-// Stats forwarded to the base ctor follow the design "Stats & drops table"
-// (Requirement 2.5). Only the hooks that differ from the base defaults are
-// overridden below.
 
 // Wraith `W` — fp 60, pwr 20, wr 10; base defaults (mobile, drop 1, hostile).
 Wraith::Wraith(int spawnChamber, Position pos)
@@ -124,7 +105,7 @@ void Shade::accept(CombatVisitor& v) { v.visit(*this); }
 Lich::Lich(int spawnChamber, Position pos)
     : Spectre(SpectreType::Lich, 30, 40, 5, spawnChamber, pos) {}
 char Lich::symbol() const { return glyphs::kLich; }
-int Lich::runeDrop() const { return 4; } // Lich cache (Requirement 2.5)
+int Lich::runeDrop() const { return 4; }
 bool Lich::isDefaultHostile() const { return false; } // aggro only when hit
 void Lich::accept(CombatVisitor& v) { v.visit(*this); }
 

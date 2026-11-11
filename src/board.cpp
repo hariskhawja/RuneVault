@@ -1,11 +1,3 @@
-// board.cpp
-// RuneVault — Board implementation (task 2.2).
-//
-// See board.h for the component contract. All 8-direction adjacency math is
-// delegated to runevault::Geometry (Requirement 5.1) so the offsets are never
-// duplicated here; the Board only layers bounds checks and cell-content filters
-// on top of the geometry.
-
 #include "runevault/board.h"
 
 #include <set>
@@ -17,8 +9,6 @@ Board::Board(int rows, int cols)
     : rows_(rows), cols_(cols),
       grid_(static_cast<std::size_t>(rows > 0 ? rows : 0),
             std::vector<Cell>(static_cast<std::size_t>(cols > 0 ? cols : 0))) {
-    // A default-constructed Cell is a Wall in kNoChamber, so the whole board
-    // starts as solid wall until task 2.3 populates the layout.
 }
 
 bool Board::inBounds(const Position &p) const {

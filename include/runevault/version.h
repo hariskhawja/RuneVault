@@ -1,12 +1,3 @@
-// version.h
-// RuneVault — project version metadata.
-//
-// This header establishes the public include root (include/runevault) that the
-// RuneVault sources and headers added by later tasks will live under. It is
-// intentionally minimal for the project-scaffolding task (task 1.1); subsequent
-// tasks add the Geometry, Board, Model, View, and Controller headers alongside
-// it.
-
 #ifndef RUNEVAULT_VERSION_H
 #define RUNEVAULT_VERSION_H
 

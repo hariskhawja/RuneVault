@@ -1,10 +1,3 @@
-// geometry.cpp
-// RuneVault — implementation of the 8-direction geometry helpers (task 1.2).
-//
-// See include/runevault/geometry.h for the contract. All adjacency math lives
-// here so the spec's "1-block radius = 8 adjacent cells" rule (Requirement 5.1)
-// is defined in exactly one place.
-
 #include "runevault/geometry.h"
 
 #include <cstdlib>

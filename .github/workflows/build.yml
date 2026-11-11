@@ -1,0 +1,34 @@
+name: Build and smoke check
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: make -j2
+      - name: Check scripted sessions
+        shell: python
+        run: |
+          import subprocess
+          cases = [
+              [],
+              ["-bonus"],
+              ["layouts/demo_positive_scrolls.txt"],
+              ["layouts/demo_fragments.txt"],
+          ]
+          for args in cases:
+              result = subprocess.run(
+                  ["./build/runevault", *args, "-seed", "42"],
+                  input="s\nq\n", text=True, capture_output=True,
+                  timeout=15, check=True,
+              )
+              assert "Sage" in result.stdout
+              assert "@" in result.stdout
+              assert not result.stderr, result.stderr
+              assert ("Notifications:" in result.stdout) == ("-bonus" in args)

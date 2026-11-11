@@ -1,19 +1,3 @@
-// view.cpp
-// RuneVault — board frame renderer implementation (task 3.1).
-//
-// See view.h for the component contract. The renderer walks the board in
-// row-major order, resolving each cell to a DD-7 glyph, then overlays the
-// caller-supplied actor/item glyphs and the stairway glyph. The bottom 5 status
-// rows are emitted blank (task 3.2 fills them).
-//
-// Wall orientation: the `Board` stores every non-carved tile as `Wall`, so the
-// View decides a wall's appearance from its neighbourhood. A wall renders as
-// `-` when it caps a chamber floor above or below, as `|` when a chamber floor
-// lies to its side (or only diagonally, i.e. a chamber corner), and as a blank
-// background space otherwise. This reproduces the design's "Default Fixed
-// Layout" figure, where only chamber perimeters are drawn and the space between
-// chambers/corridors is left blank.
-
 #include "runevault/view.h"
 
 #include "runevault/cell.h"
@@ -24,9 +8,6 @@
 namespace runevault {
 namespace {
 
-// Pad with spaces or truncate `text` so the result is EXACTLY `width`
-// characters. Keeps every status line at the 79-column frame width so the frame
-// stays 30 rows × 79 cols with colour off (Requirement 2.2).
 std::string fitToWidth(const std::string &text, int width) {
     const std::size_t w = static_cast<std::size_t>(width);
     if (text.size() >= w) {
@@ -37,9 +18,6 @@ std::string fitToWidth(const std::string &text, int width) {
     return out;
 }
 
-// True iff `(row, col)` is in bounds and is a chamber FLOOR tile. Walls,
-// corridors, archways and the (special) stairway type are not chamber floor, so
-// only real chamber interiors drive wall orientation.
 bool isFloorAt(const Board &board, int row, int col) {
     const Position p{row, col};
     return board.inBounds(p) && board.at(p).type == CellType::Floor;
@@ -155,16 +133,13 @@ std::string View::renderFrame(const Level &level,
     std::string out;
     out.reserve(static_cast<std::size_t>(kFrameRows) * (kFrameCols + 1));
 
-    // --- Playable region: the board tiles (Requirement 2.3) ----------------
     for (int r = 0; r < rows; ++r) {
         for (int c = 0; c < cols; ++c) {
             const Position p{r, c};
             char glyph;
             if (overlayGlyph[r][c] != '\0') {
-                // Actors / items sit on top of everything (Requirement 2.4/2.5).
                 glyph = overlayGlyph[r][c];
             } else if (stairwayIsFloor && p == stairway) {
-                // Stairway hidden as floor until revealed (Requirements 2.6/2.7).
                 glyph = level.stairwayRevealed() ? glyphs::kStairwayRevealed
                                                  : glyphs::kStairwayHidden;
             } else {
@@ -175,7 +150,6 @@ std::string View::renderFrame(const Level &level,
         out += '\n';
     }
 
-    // --- Status area: blank rows (no status supplied) -----------------------
     for (int r = 0; r < kStatusRows; ++r) {
         out.append(static_cast<std::size_t>(kFrameCols), glyphs::kBlank);
         out += '\n';
@@ -185,11 +159,6 @@ std::string View::renderFrame(const Level &level,
 }
 
 std::vector<std::string> View::buildStatusRows(const StatusInfo &status) const {
-    // Row layout across the bottom 5 rows (Requirement 2.2 / 2.8):
-    //   row 0 : separator rule
-    //   row 1 : class + FP + Pwr + WR
-    //   row 2 : total Rune Fragments + current level + last action entered
-    //   row 3+: identified-scroll hints / messages (one per row, truncated)
     std::vector<std::string> rows;
     rows.reserve(static_cast<std::size_t>(kStatusRows));
 
@@ -197,7 +166,6 @@ std::vector<std::string> View::buildStatusRows(const StatusInfo &status) const {
     rows.push_back(std::string(static_cast<std::size_t>(kFrameCols),
                                glyphs::kWallHorizontal));
 
-    // Class + combat stats. FP is shown as current/max (Requirement 2.8).
     std::string stats = "Class: " + status.className +
                         "   FP: " + std::to_string(status.fp) + "/" +
                         std::to_string(status.maxFp) +
@@ -229,14 +197,8 @@ std::vector<std::string> View::buildStatusRows(const StatusInfo &status) const {
 
 std::string View::renderFrame(const Level &level, const RenderOverlay &overlay,
                               const StatusInfo &status) const {
-    // Render the board + blank status area, then replace the blank status rows
-    // with the populated ones. The board portion is identical to the
-    // overlay-only overload (Requirement 2.3).
     std::string out = renderFrame(level, overlay);
 
-    // Drop the trailing blank status rows so we can append the populated ones.
-    // Each row (board and status) is followed by '\n'; find the split point at
-    // the end of the board region.
     std::size_t pos = 0;
     int newlines = 0;
     for (std::size_t i = 0; i < out.size() && newlines < kPlayableRows; ++i) {

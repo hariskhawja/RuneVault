@@ -1,10 +1,3 @@
-// arcanist.cpp
-// RuneVault — Arcanist stat container + mutators (task 5.1).
-//
-// See include/runevault/arcanist.h for the scope of this task. Each mutator
-// enforces the class invariants: FP stays within [0, maxFp] and pwr_/wr_ never
-// go negative.
-
 #include "runevault/arcanist.h"
 
 namespace runevault {
@@ -16,7 +9,7 @@ int floorAtZero(int v) { return v < 0 ? 0 : v; }
 
 Arcanist::Arcanist(int fp, int pwr, int wr)
     : fp_(floorAtZero(fp)),
-      maxFp_(floorAtZero(fp)), // Requirement 1.8: max FP equals starting FP.
+      maxFp_(floorAtZero(fp)),
       pwr_(floorAtZero(pwr)),
       wr_(floorAtZero(wr)),
       strategy_(nullptr) {}
@@ -24,7 +17,7 @@ Arcanist::Arcanist(int fp, int pwr, int wr)
 Arcanist::Arcanist(int fp, int pwr, int wr,
                    std::unique_ptr<ArcanistClassStrategy> strategy)
     : fp_(floorAtZero(fp)),
-      maxFp_(floorAtZero(fp)), // Requirement 1.8: max FP equals starting FP.
+      maxFp_(floorAtZero(fp)),
       pwr_(floorAtZero(pwr)),
       wr_(floorAtZero(wr)),
       strategy_(std::move(strategy)) {}
@@ -37,8 +30,7 @@ void Arcanist::reduceFp(int amount) {
 }
 
 void Arcanist::applyDamage(int rawDamage) {
-    // For this task damage is applied raw; the strategy hook and Aegis ordering
-    // arrive in tasks 9.1 / 7.3.
+
     reduceFp(rawDamage);
 }
 
@@ -53,9 +45,6 @@ void Arcanist::healUpTo(int amount) {
 }
 
 void Arcanist::loseUpTo(int amount) {
-    // Drain Focus (Requirement 8.4): permanent FP drain, NOT combat damage, so
-    // it bypasses applyDamage's (future) mitigation and goes straight to the
-    // raw primitive.
     reduceFp(amount);
 }
 

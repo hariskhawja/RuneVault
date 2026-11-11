@@ -1,10 +1,3 @@
-// layout_loader.cpp
-// RuneVault — implementation of the optional level-layout file loader
-// (task 18.2, Requirements 12.1 / 12.2 / 12.4).
-//
-// See layout_loader.h for the documented file format, glyph/digit mapping,
-// chamber-derivation simplification, and malformed-detection rules.
-
 #include "runevault/layout_loader.h"
 
 #include "runevault/cell.h"
@@ -22,9 +15,6 @@ namespace runevault {
 
 namespace {
 
-// True iff `line` is empty or contains only whitespace — the block separator
-// (Requirement 12.1 blocks are blank-line-delimited; every real map row carries
-// at least one wall glyph so this is unambiguous).
 bool isBlankLine(const std::string &line) {
     for (char c : line) {
         if (c != ' ' && c != '\t' && c != '\r') {
@@ -49,10 +39,6 @@ std::vector<std::string> splitLines(const std::string &contents) {
     return lines;
 }
 
-// Map a single map glyph to its CellType. `ok` is set false for an unrecognized
-// glyph (Requirement 12.4 strictness). Digits and space are handled by the
-// caller (digits become Floor + an item; space is void → Wall), so this only
-// covers the structural glyphs.
 CellType glyphToCell(char glyph, bool &ok) {
     ok = true;
     switch (glyph) {
@@ -71,10 +57,7 @@ CellType glyphToCell(char glyph, bool &ok) {
     }
 }
 
-// Flood-fill contiguous Floor regions (4-connected) on `board`, assigning
-// chamber ids 1..N in row-major discovery order. Non-floor cells keep
-// kNoChamber. A documented simplification for file layouts (the raw map does
-// not carry the figure's chamber-id digits).
+// Flood-fill orthogonally connected floor tiles into chambers.
 void assignChambers(Board &board) {
     const int rows = board.rows();
     const int cols = board.cols();
@@ -119,7 +102,6 @@ void assignChambers(Board &board) {
     }
 }
 
-// Build a failed LoadedLayout carrying `message` (Requirement 12.4).
 LoadedLayout fail(const std::string &message) {
     LoadedLayout result;
     result.ok = false;
@@ -130,8 +112,6 @@ LoadedLayout fail(const std::string &message) {
 } // namespace
 
 std::unique_ptr<Item> LayoutLoader::makeItemForDigit(char digit) {
-    // Map explicitly per digit (Requirement 12.2) rather than casting, so the
-    // mapping is robust to any future reordering of the enums.
     switch (digit) {
     case '0':
         return std::make_unique<Scroll>(ScrollType::AttuneFocus);
@@ -161,17 +141,6 @@ std::unique_ptr<Item> LayoutLoader::makeItemForDigit(char digit) {
 LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
     std::vector<std::string> lines = splitLines(contents);
 
-    // Piazza Q15 Follow-up-2: the layout file is ONE 79x25 map grid that is
-    // applied to ALL FIVE levels (since every level shares the same fixed
-    // chamber configuration), NOT five separate grids. So we parse a SINGLE
-    // grid here and replicate the resulting board + item placements across all
-    // five levels below (Q15 Follow-up-3: scroll/fragment placements are thus
-    // identical on every level, while the Arcanist, stairway, and Spectres stay
-    // randomly generated per level since they have no file encoding).
-    //
-    // Leading/trailing blank lines are treated as padding and ignored; the
-    // remaining lines form the single grid. (An interior blank/whitespace line
-    // is a valid all-void row.)
     std::size_t begin = 0;
     std::size_t end = lines.size();
     while (begin < end && isBlankLine(lines[begin])) {
@@ -181,7 +150,6 @@ LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
         --end;
     }
 
-    // Requirement 12.4: an empty file (no map) is malformed.
     if (begin == end) {
         return fail("layout file is empty: expected a 79x25 map grid");
     }
@@ -189,7 +157,6 @@ LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
     const std::vector<std::string> grid(lines.begin() + begin,
                                         lines.begin() + end);
 
-    // Requirement 12.4: the grid may not exceed the 25-row playable region.
     if (static_cast<int>(grid.size()) > kPlayableRows) {
         return fail("layout file malformed: map has " +
                     std::to_string(grid.size()) + " rows (max " +
@@ -202,7 +169,6 @@ LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
     for (int r = 0; r < static_cast<int>(grid.size()); ++r) {
         const std::string &row = grid[r];
 
-        // Requirement 12.4: a row may not exceed the 79-column region.
         if (static_cast<int>(row.size()) > kPlayableCols) {
             return fail("layout file malformed: row " + std::to_string(r + 1) +
                         " is " + std::to_string(row.size()) +
@@ -219,8 +185,6 @@ LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
                 continue;
             }
             if (glyph >= '0' && glyph <= '9') {
-                // A digit sits on a FLOOR tile and denotes an item there
-                // (Requirement 12.2). Chamber id is filled in below.
                 board.setCell(p, CellType::Floor);
                 placements.push_back(ItemPlacement{p, glyph});
                 continue;
@@ -229,7 +193,6 @@ LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
             bool glyphOk = false;
             const CellType type = glyphToCell(glyph, glyphOk);
             if (!glyphOk) {
-                // Requirement 12.4: unrecognized glyph → malformed (strict).
                 return fail(std::string("layout file malformed: row ") +
                             std::to_string(r + 1) + " col " +
                             std::to_string(c + 1) +
@@ -239,10 +202,10 @@ LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
         }
     }
 
-    // Derive chamber membership by flood-fill (documented simplification).
+    // Derive chamber membership by flood-fill.
     assignChambers(board);
 
-    // Replicate the single parsed grid across all five levels (Q15 FU-2/FU-3).
+    // Replicate the single parsed grid across all five levels.
     LoadedLayout result;
     for (int levelIndex = 0; levelIndex < kLayoutLevelCount; ++levelIndex) {
         result.boards[levelIndex] = board;
@@ -255,7 +218,6 @@ LoadedLayout LayoutLoader::loadFromString(const std::string &contents) {
 LoadedLayout LayoutLoader::loadFromFile(const std::string &path) {
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        // Requirement 12.4: a missing / unopenable file is reported at startup.
         return fail("layout file could not be opened (missing?): " + path);
     }
     std::ostringstream buffer;
@@ -273,7 +235,6 @@ std::unique_ptr<Level> LayoutLoader::buildLevel(const LoadedLayout &loaded,
     // Copy the parsed board into a fresh Level.
     auto level = std::make_unique<Level>(loaded.boards[levelIndex]);
 
-    // Drop each digit's item onto its floor tile (Requirement 12.2).
     for (const ItemPlacement &placement : loaded.items[levelIndex]) {
         std::unique_ptr<Item> item = makeItemForDigit(placement.digit);
         if (!item) {

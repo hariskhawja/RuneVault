@@ -9,3 +9,16 @@
 # Editor / OS cruft
 *.swp
 .DS_Store
+
+# Local output and tooling
+/out/
+.vscode/
+.idea/
+*.d
+*.stackdump
+Thumbs.db
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
